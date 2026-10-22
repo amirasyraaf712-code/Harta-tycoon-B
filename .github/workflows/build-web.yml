@@ -1,0 +1,64 @@
+
+name: Build HARTA TYCOON Web
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "HARTA_TYCOON_Flutter_Starter.zip"
+      - ".github/workflows/build-web.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Extract project
+        run: |
+          mkdir appsrc
+          unzip HARTA_TYCOON_Flutter_Starter.zip -d appsrc
+
+      - name: Generate web platform
+        working-directory: appsrc
+        run: flutter create --platforms=web --project-name=harta_tycoon .
+
+      - name: Get dependencies
+        working-directory: appsrc
+        run: flutter pub get
+
+      - name: Build web
+        working-directory: appsrc
+        run: flutter build web --release --base-href "/${GITHUB_REPOSITORY#*/}/"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: appsrc/build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
