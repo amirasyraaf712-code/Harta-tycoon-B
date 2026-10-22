@@ -1,0 +1,53 @@
+name: Build HARTA TYCOON APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "HARTA_TYCOON_Flutter_Starter.zip"
+      - ".github/workflows/build-apk.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Extract starter project
+        run: |
+          mkdir appsrc
+          unzip HARTA_TYCOON_Flutter_Starter.zip -d appsrc
+          ls -la appsrc
+
+      - name: Generate Android platform files
+        working-directory: appsrc
+        run: flutter create --platforms=android --project-name=harta_tycoon .
+
+      - name: Get dependencies
+        working-directory: appsrc
+        run: flutter pub get
+
+      - name: Build debug APK
+        working-directory: appsrc
+        run: flutter build apk --debug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: harta-tycoon-debug-apk
+          path: appsrc/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
